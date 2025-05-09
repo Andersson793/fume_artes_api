@@ -15,6 +15,7 @@ import (
 
 func main() {
 
+	//load .env file
 	err := godotenv.Load()
 
 	if err != nil {
@@ -32,7 +33,6 @@ func main() {
 
 	app.Get("/customers", func(c *fiber.Ctx) error {
 
-		//var method string = c.Method()
 		var customers []Customer
 
 		db.Find(&customers)
@@ -65,7 +65,28 @@ func main() {
 		return c.JSON(pending_service)
 	})
 
-	//post
+	app.Post("/users", func(c *fiber.Ctx) error {
+
+		var user User
+
+		err := c.BodyParser(&user)
+
+		if err != nil {
+			log.Println(err)
+		}
+
+		user.ID = uuid.New()
+
+		statusCode := 200
+
+		rp := db.Create(&user)
+
+		if rp.Error != nil {
+			statusCode = 400
+		}
+
+		return c.SendStatus(statusCode)
+	})
 
 	app.Post("/customers", func(c *fiber.Ctx) error {
 
@@ -92,8 +113,9 @@ func main() {
 
 	app.Post("/orders", func(c *fiber.Ctx) error {
 
-		var orders Customer
+		var orders Order
 
+		//parse request body
 		err := c.BodyParser(&orders)
 
 		if err != nil {
@@ -115,7 +137,7 @@ func main() {
 
 	app.Post("/pending_services", func(c *fiber.Ctx) error {
 
-		var pendingServices Customer
+		var pendingServices PendingService
 
 		err := c.BodyParser(&pendingServices)
 
