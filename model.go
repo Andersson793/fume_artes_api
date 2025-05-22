@@ -17,13 +17,14 @@ type Customer struct {
 }
 
 type Order struct {
-	ID         uuid.UUID      `json:"id"`
-	Customer   string         `json:"customer"`
-	User_ID    uuid.UUID      `json:"user_id"` //foreign key
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
-	DeletedAt  gorm.DeletedAt `json:"deleted_at"`
-	OrderItems []OrderItems   `json:"order_items"` //has many
+	ID          uuid.UUID      `json:"id"`
+	Customer    string         `json:"customer"`
+	Description string         `json:"description"`
+	UserID      uuid.UUID      `json:"user_id"` //foreign key
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `json:"deleted_at"`
+	OrderItems  []OrderItems   `json:"order_items"` //has many
 }
 
 type OrderItems struct {
@@ -44,13 +45,14 @@ type User struct {
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `json:"deleted_at"`
-	//LastLogin
+	Password  string         `json:"-"`
+	LastLogin time.Time      `json:"last_login"`
 	//Group
 }
 
 type PendingService struct {
 	ID          uuid.UUID      `json:"id"`
-	User_ID     uuid.UUID      `json:"user_id"` //foreign key
+	UserID      uuid.UUID      `json:"user_id"` //foreign key
 	Description string         `json:"description"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`

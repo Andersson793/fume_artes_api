@@ -1,10 +1,14 @@
 package main
 
 import (
+	"encoding/base64"
+	"errors"
 	"log"
 	"os"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
 	"gorm.io/driver/postgres"
@@ -24,6 +28,37 @@ func main() {
 
 	app := fiber.New()
 
+	api := app.Group("/api", func(c *fiber.Ctx) error {
+
+		authorization := c.GetReqHeaders()
+
+		var tokenString string = authorization["Authorization"][0]
+
+		key, err := base64.StdEncoding.DecodeString(os.Getenv("JWT_KEY"))
+
+		//validate token
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
+
+			return key, nil
+		}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+
+		switch {
+		case token.Valid:
+			return c.Next()
+		case errors.Is(err, jwt.ErrTokenMalformed):
+			return c.SendString("That's not even a token")
+		case errors.Is(err, jwt.ErrTokenSignatureInvalid):
+			// Invalid signature
+			return c.SendString("Invalid signature")
+		case errors.Is(err, jwt.ErrTokenExpired) || errors.Is(err, jwt.ErrTokenNotValidYet):
+			// Token is either expired or not active yet
+			return c.SendString("Timing is everything")
+		default:
+			return c.SendString("Couldn't handle this token")
+		}
+
+	})
+
 	//connect database
 	db, err := gorm.Open(postgres.Open(os.Getenv("PG_STRING")), &gorm.Config{})
 
@@ -31,7 +66,7 @@ func main() {
 		println("Can't connect database")
 	}
 
-	app.Get("/customers", func(c *fiber.Ctx) error {
+	api.Get("/customers", func(c *fiber.Ctx) error {
 
 		var customers []Customer
 
@@ -40,7 +75,16 @@ func main() {
 		return c.JSON(customers)
 	})
 
-	app.Get("/users", func(c *fiber.Ctx) error {
+	api.Get("/users/:id", func(c *fiber.Ctx) error {
+
+		var user User
+
+		db.Find(&user, "id = ?", c.Params("id"))
+
+		return c.JSON(user)
+	})
+
+	api.Get("/users", func(c *fiber.Ctx) error {
 
 		var users []User
 
@@ -49,23 +93,125 @@ func main() {
 		return c.JSON(users)
 	})
 
-	app.Get("/orders", func(c *fiber.Ctx) error {
+	api.Get("/orders", func(c *fiber.Ctx) error {
 		var orders []Order
 
-		db.Find(&orders)
+		type Result struct {
+			ID          uuid.UUID `json:"id"`
+			Description string    `json:"description"`
+			Customer    string    `json:"customer"`
+			CreatedAt   time.Time `json:"created_at"`
+			Total       string    `json:"total_items"`
+		}
 
-		return c.JSON(orders)
+		var result []Result
+
+		db.Model(&orders).Select("orders.id, orders.description, orders.customer, orders.created_at, SUM(order_items.price) as total").Joins("inner join order_items on order_items.order_id = orders.id").Group("orders.id").Scan(&result)
+
+		return c.JSON(result)
 	})
 
-	app.Get("/pending_services", func(c *fiber.Ctx) error {
+	//see Query params
+	api.Get("/pending_services", func(c *fiber.Ctx) error {
 		var pending_service []PendingService
 
-		db.Find(&pending_service)
+		type Result struct {
+			ID          uuid.UUID `json:"id"`
+			Name        string    `json:"user_name"`
+			Description string    `json:"description"`
+			CreatedAt   time.Time `json:"created_at"`
+		}
 
-		return c.JSON(pending_service)
+		var result []Result
+
+		db.Model(&pending_service).Select("pending_services.id, users.name, pending_services.description, pending_services.created_at").Joins("inner join users on pending_services.user_id = users.id").Scan(&result)
+
+		return c.JSON(result)
 	})
 
-	app.Post("/users", func(c *fiber.Ctx) error {
+	//login
+	app.Get("/login", func(c *fiber.Ctx) error {
+
+		var LoginForm struct {
+			Email    string
+			Password string
+		}
+
+		var user User
+
+		//get request body
+		c.BodyParser(LoginForm)
+
+		er := db.First(&user).Where("password = crypt($1, password) and email = $2", LoginForm.Password, LoginForm.Email).Scan(&user)
+
+		if er.Error != nil {
+			c.SendStatus(403)
+			c.SendString("login failed")
+		}
+
+		//generete JWT token
+		var tokenString string
+
+		key, err := base64.StdEncoding.DecodeString(os.Getenv("JWT_KEY"))
+
+		t := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"user_id": user.ID.String(),
+			"exp":     time.Now().Add(24 * time.Hour).Unix(),
+		})
+
+		tokenString, err = t.SignedString(key)
+
+		//claims := t.Claims.(jwt.MapClaims)
+
+		//set cookie
+		var cookie fiber.Cookie
+
+		cookie.Name = "user_id"
+		cookie.Value = user.ID.String()
+		cookie.Expires = time.Now().Add(24 * time.Hour)
+
+		c.Cookie(&cookie)
+
+		if err != nil {
+			log.Println(err)
+		}
+
+		return c.SendString(tokenString)
+	})
+
+	//validate jwt token
+	app.Get("/jwt_validate", func(c *fiber.Ctx) error {
+
+		authorization := c.GetReqHeaders()
+
+		var tokenString string = authorization["Authorization"][0]
+
+		key, err := base64.StdEncoding.DecodeString(os.Getenv("JWT_KEY"))
+
+		//validate token
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
+
+			return key, nil
+		}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+
+		switch {
+		case token.Valid:
+			return c.SendString("You look nice today")
+		case errors.Is(err, jwt.ErrTokenMalformed):
+			return c.SendString("That's not even a token")
+		case errors.Is(err, jwt.ErrTokenSignatureInvalid):
+			// Invalid signature
+			return c.SendString("Invalid signature")
+		case errors.Is(err, jwt.ErrTokenExpired) || errors.Is(err, jwt.ErrTokenNotValidYet):
+			// Token is either expired or not active yet
+			return c.SendString("Timing is everything")
+		default:
+			return c.SendString("Couldn't handle this token")
+		}
+
+	})
+
+	api.Post("/users", func(c *fiber.Ctx) error {
 
 		var user User
 
@@ -88,7 +234,7 @@ func main() {
 		return c.SendStatus(statusCode)
 	})
 
-	app.Post("/customers", func(c *fiber.Ctx) error {
+	api.Post("/customers", func(c *fiber.Ctx) error {
 
 		var customer Customer
 
@@ -111,7 +257,7 @@ func main() {
 		return c.SendStatus(statusCode)
 	})
 
-	app.Post("/orders", func(c *fiber.Ctx) error {
+	api.Post("/orders", func(c *fiber.Ctx) error {
 
 		var orders Order
 
@@ -135,7 +281,7 @@ func main() {
 		return c.SendStatus(statusCode)
 	})
 
-	app.Post("/pending_services", func(c *fiber.Ctx) error {
+	api.Post("/pending_services", func(c *fiber.Ctx) error {
 
 		var pendingServices PendingService
 
