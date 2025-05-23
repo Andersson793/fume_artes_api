@@ -142,14 +142,17 @@ func main() {
 		var user User
 
 		//get request body
-		c.BodyParser(LoginForm)
+		c.BodyParser(&LoginForm)
 
-		er := db.First(&user).Where("password = crypt($1, password) and email = $2", LoginForm.Password, LoginForm.Email).Scan(&user)
+		//corrija isso !
+		db.Where("password = crypt($1, password) AND email = $2", LoginForm.Password, LoginForm.Email).First(&user).Scan(&user)
 
-		if er.Error != nil {
-			c.SendStatus(403)
-			c.SendString("login failed")
-		}
+		/*
+			if er.Error != nil {
+				c.SendStatus(403)
+				c.SendString("login failed")
+			}
+		*/
 
 		//generete JWT token
 		var tokenString string
@@ -158,6 +161,7 @@ func main() {
 
 		t := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 			"user_id": user.ID.String(),
+			"name":    user.Name,
 			"exp":     time.Now().Add(24 * time.Hour).Unix(),
 		})
 
