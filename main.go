@@ -193,7 +193,7 @@ func main() {
 		cookie3.SameSite = "None"
 		cookie3.Expires = time.Now().Add(24 * time.Hour)
 		cookie3.SessionOnly = true
-		cookie3.Domain = "localhost"
+		cookie3.MaxAge = int(time.Now().Add(48 * time.Hour).Unix())
 
 		c.Cookie(&cookie)
 		c.Cookie(&cookie2)
