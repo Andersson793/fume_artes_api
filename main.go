@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
@@ -27,6 +28,11 @@ func main() {
 	}
 
 	app := fiber.New()
+
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "http://127.0.0.1, http://localhost",
+		AllowHeaders: "Origin, Content-Type, Accept",
+	}))
 
 	api := app.Group("/api", func(c *fiber.Ctx) error {
 
