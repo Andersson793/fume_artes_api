@@ -79,6 +79,8 @@ func main() {
 
 		var user User
 
+		//can use cookies
+
 		db.Find(&user, "id = ?", c.Params("id"))
 
 		return c.JSON(user)
@@ -161,16 +163,37 @@ func main() {
 
 		tokenString, err = t.SignedString(key)
 
-		//claims := t.Claims.(jwt.MapClaims)
-
 		//set cookie
 		var cookie fiber.Cookie
+		var cookie2 fiber.Cookie
+		var cookie3 fiber.Cookie
 
 		cookie.Name = "user_id"
 		cookie.Value = user.ID.String()
+		cookie.Secure = true
+		cookie.HTTPOnly = true
+		cookie.SameSite = "Strict"
 		cookie.Expires = time.Now().Add(24 * time.Hour)
 
+		cookie2.Name = "name"
+		cookie2.Value = user.Name
+		cookie2.Secure = true
+		cookie2.HTTPOnly = false
+		cookie2.SameSite = "Strict"
+		cookie2.Expires = time.Now().Add(24 * time.Hour)
+
+		cookie3.Name = "test"
+		cookie3.Value = user.Name
+		cookie3.Secure = false
+		cookie3.HTTPOnly = false
+		cookie3.SameSite = "None"
+		cookie3.Expires = time.Now().Add(24 * time.Hour)
+		cookie3.SessionOnly = true
+		cookie3.Domain = "localhost"
+
 		c.Cookie(&cookie)
+		c.Cookie(&cookie2)
+		c.Cookie(&cookie3)
 
 		if err != nil {
 			log.Println(err)
