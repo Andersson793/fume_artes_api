@@ -118,8 +118,8 @@ func main() {
 
 		c.Response().Header.Add("Cache-Control", "max-age=3600, private")
 
-		//
-		agent := fiber.Get("https://api.hgbrasil.com/finance?" + os.Getenv("PG_STRING"))
+		//remove the key
+		agent := fiber.Get("https://api.hgbrasil.com/finance?key=aa975239")
 
 		statusCode, body, errs := agent.Bytes()
 
