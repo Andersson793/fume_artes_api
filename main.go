@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -21,17 +21,12 @@ import (
 
 func main() {
 
-	//load .env file
-	err := godotenv.Load()
-
-	if err != nil {
-		log.Println("Failed to load env file")
-	}
+	godotenv.Load(".env.local")
 
 	app := fiber.New()
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "http://localhost:5173",
+		AllowOrigins: "http://localhost,http://localhost:5173, http://127.0.0.2, http://127.0.0.2:5173",
 	}))
 
 	api := app.Group("/api", func(c *fiber.Ctx) error {
@@ -119,6 +114,25 @@ func main() {
 		return c.JSON(result)
 	})
 
+	api.Get("/hgbrasil", func(c *fiber.Ctx) error {
+
+		c.Response().Header.Add("Cache-Control", "max-age=3600, private")
+
+		//remove the key
+		agent := fiber.Get("https://api.hgbrasil.com/finance?key=aa975239")
+
+		statusCode, body, errs := agent.Bytes()
+
+		if len(errs) > 0 {
+			log.Println(errs)
+		}
+
+		var something fiber.Map
+		json.Unmarshal(body, &something)
+
+		return c.Status(statusCode).JSON(something)
+	})
+
 	//see Query params
 	api.Get("/pending_services", func(c *fiber.Ctx) error {
 		var pending_service []PendingService
@@ -153,8 +167,6 @@ func main() {
 		c.BodyParser(&LoginForm)
 
 		query := db.Where("password = crypt($1, password) AND email = $2", LoginForm.Password, LoginForm.Email).First(&user).Scan(&user)
-
-		fmt.Println(query.RowsAffected)
 
 		if query.RowsAffected < 1 {
 			statusCode = 403
