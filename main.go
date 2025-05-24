@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -30,8 +31,7 @@ func main() {
 	app := fiber.New()
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "http://127.0.0.1, http://localhost",
-		AllowHeaders: "Origin, Content-Type, Accept",
+		AllowOrigins: "http://localhost:5173",
 	}))
 
 	api := app.Group("/api", func(c *fiber.Ctx) error {
@@ -138,11 +138,13 @@ func main() {
 	})
 
 	//login
-	app.Get("/login", func(c *fiber.Ctx) error {
+	app.Post("/login", func(c *fiber.Ctx) error {
+
+		statusCode := 200
 
 		var LoginForm struct {
-			Email    string
-			Password string
+			Email    string `json:"email"`
+			Password string `json:"password"`
 		}
 
 		var user User
@@ -150,15 +152,14 @@ func main() {
 		//get request body
 		c.BodyParser(&LoginForm)
 
-		//corrija isso !
-		db.Where("password = crypt($1, password) AND email = $2", LoginForm.Password, LoginForm.Email).First(&user).Scan(&user)
+		query := db.Where("password = crypt($1, password) AND email = $2", LoginForm.Password, LoginForm.Email).First(&user).Scan(&user)
 
-		/*
-			if er.Error != nil {
-				c.SendStatus(403)
-				c.SendString("login failed")
-			}
-		*/
+		fmt.Println(query.RowsAffected)
+
+		if query.RowsAffected < 1 {
+			statusCode = 403
+			return c.SendString("login failed")
+		}
 
 		//generete JWT token
 		var tokenString string
@@ -173,10 +174,13 @@ func main() {
 
 		tokenString, err = t.SignedString(key)
 
+		if err != nil {
+			log.Println(err)
+		}
+
 		//set cookie
 		var cookie fiber.Cookie
 		var cookie2 fiber.Cookie
-		var cookie3 fiber.Cookie
 
 		cookie.Name = "user_id"
 		cookie.Value = user.ID.String()
@@ -185,31 +189,35 @@ func main() {
 		cookie.SameSite = "Strict"
 		cookie.Expires = time.Now().Add(24 * time.Hour)
 
-		cookie2.Name = "name"
+		cookie2.Name = "user_name"
 		cookie2.Value = user.Name
 		cookie2.Secure = true
 		cookie2.HTTPOnly = false
 		cookie2.SameSite = "Strict"
 		cookie2.Expires = time.Now().Add(24 * time.Hour)
 
-		cookie3.Name = "test"
-		cookie3.Value = user.Name
-		cookie3.Secure = false
-		cookie3.HTTPOnly = false
-		cookie3.SameSite = "None"
-		cookie3.Expires = time.Now().Add(24 * time.Hour)
-		cookie3.SessionOnly = true
-		cookie3.MaxAge = int(time.Now().Add(48 * time.Hour).Unix())
-
 		c.Cookie(&cookie)
 		c.Cookie(&cookie2)
-		c.Cookie(&cookie3)
 
 		if err != nil {
 			log.Println(err)
 		}
 
-		return c.SendString(tokenString)
+		type Resp struct {
+			Token     string `json:"token"`
+			UserName  string `json:"user_name"`
+			UserEmail string `json:"user_email"`
+		}
+
+		var resp Resp
+
+		resp.Token = tokenString
+		resp.UserName = user.Name
+		resp.UserEmail = user.Email
+
+		c.SendStatus(statusCode)
+
+		return c.JSON(resp)
 	})
 
 	//validate jwt token
