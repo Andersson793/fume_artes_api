@@ -35,8 +35,7 @@ func main() {
 
 		var tokenString string
 
-		//here
-		if len(authorization) > 0 {
+		if len(authorization["Authorization"]) > 0 {
 			tokenString = authorization["Authorization"][0]
 		} else {
 			return c.Status(403).SendString("The Autorization header is missing")
