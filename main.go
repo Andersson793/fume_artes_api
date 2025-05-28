@@ -338,5 +338,16 @@ func main() {
 		return c.SendStatus(statusCode)
 	})
 
+	// Delet
+
+	api.Delete("/orders/:id", func(c *fiber.Ctx) error {
+
+		var order Order
+
+		db.Where("id = ?", c.Params("id")).Delete(&order)
+
+		return c.SendString("deleded")
+	})
+
 	app.Listen(":3000")
 }
