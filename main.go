@@ -33,7 +33,14 @@ func main() {
 
 		authorization := c.GetReqHeaders()
 
-		var tokenString string = authorization["Authorization"][0]
+		var tokenString string
+
+		//here
+		if len(authorization) > 0 {
+			tokenString = authorization["Authorization"][0]
+		} else {
+			return c.Status(403).SendString("The Autorization header is missing")
+		}
 
 		key, err := base64.StdEncoding.DecodeString(os.Getenv("JWT_KEY"))
 
@@ -119,7 +126,7 @@ func main() {
 		c.Response().Header.Add("Cache-Control", "max-age=3600, private")
 
 		//remove the key
-		agent := fiber.Get("https://api.hgbrasil.com/finance?key=aa975239")
+		agent := fiber.Get("https://api.hgbrasil.com/finance?key=" + os.Getenv("HG_KEY"))
 
 		statusCode, body, errs := agent.Bytes()
 
@@ -154,8 +161,6 @@ func main() {
 	//login
 	app.Post("/login", func(c *fiber.Ctx) error {
 
-		statusCode := 200
-
 		var LoginForm struct {
 			Email    string `json:"email"`
 			Password string `json:"password"`
@@ -169,8 +174,7 @@ func main() {
 		query := db.Where("password = crypt($1, password) AND email = $2", LoginForm.Password, LoginForm.Email).First(&user).Scan(&user)
 
 		if query.RowsAffected < 1 {
-			statusCode = 403
-			return c.SendString("login failed")
+			return c.Status(403).SendString("login failed")
 		}
 
 		//generete JWT token
@@ -190,27 +194,6 @@ func main() {
 			log.Println(err)
 		}
 
-		//set cookie
-		var cookie fiber.Cookie
-		var cookie2 fiber.Cookie
-
-		cookie.Name = "user_id"
-		cookie.Value = user.ID.String()
-		cookie.Secure = true
-		cookie.HTTPOnly = true
-		cookie.SameSite = "Strict"
-		cookie.Expires = time.Now().Add(24 * time.Hour)
-
-		cookie2.Name = "user_name"
-		cookie2.Value = user.Name
-		cookie2.Secure = true
-		cookie2.HTTPOnly = false
-		cookie2.SameSite = "Strict"
-		cookie2.Expires = time.Now().Add(24 * time.Hour)
-
-		c.Cookie(&cookie)
-		c.Cookie(&cookie2)
-
 		if err != nil {
 			log.Println(err)
 		}
@@ -226,8 +209,6 @@ func main() {
 		resp.Token = tokenString
 		resp.UserName = user.Name
 		resp.UserEmail = user.Email
-
-		c.SendStatus(statusCode)
 
 		return c.JSON(resp)
 	})
