@@ -38,7 +38,7 @@ func main() {
 		if len(authorization["Authorization"]) > 0 {
 			tokenString = authorization["Authorization"][0]
 		} else {
-			return c.Status(403).SendString("The Autorization header is missing")
+			return fiber.NewError(404, "The Autorization header is missing")
 		}
 
 		key, err := base64.StdEncoding.DecodeString(os.Getenv("JWT_KEY"))
@@ -137,6 +137,13 @@ func main() {
 		json.Unmarshal(body, &something)
 
 		return c.Status(statusCode).JSON(something)
+	})
+
+	api.Get("historical_data", func(c *fiber.Ctx) error {
+
+		// fiber map
+
+		return c.SendStatus(200)
 	})
 
 	//see Query params
@@ -337,8 +344,7 @@ func main() {
 		return c.SendStatus(statusCode)
 	})
 
-	// Delet
-
+	// Delete
 	api.Delete("/orders/:id", func(c *fiber.Ctx) error {
 
 		var order Order

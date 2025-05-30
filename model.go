@@ -16,6 +16,13 @@ type Customer struct {
 	DeletedAt gorm.DeletedAt `json:"deleted_at"`
 }
 
+type HistoricalData struct {
+	Day        int
+	Month      int
+	Year       int
+	TotalItems int
+}
+
 type Order struct {
 	ID          uuid.UUID      `json:"id"`
 	Customer    string         `json:"customer"`
