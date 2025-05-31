@@ -67,10 +67,10 @@ func main() {
 	})
 
 	//test routes
-	test := app.Group("test", func(c *fiber.Ctx) error {
+	test := app.Group("/test", func(c *fiber.Ctx) error {
 
 		c.Set("Access-Control-Allow-Origin", "*")
-		c.Set("Cache-Control", "max-age='86400'")
+		c.Set("Cache-Control", "max-age=86400")
 
 		return c.Next()
 	})
@@ -88,21 +88,10 @@ func main() {
 
 	test.Get("/customers", func(c *fiber.Ctx) error {
 
-		var customres []Customer
-
-		one := Customer{
-			Name: "My Customer",
-			Cnpj: "37.149.345/0001-23",
-		}
-
-		two := Customer{
-			Name: "My Customer",
-			Cnpj: "37.149.345/0001-23",
-		}
-
-		tree := Customer{
-			Name: "My Customer",
-			Cnpj: "37.149.345/0001-23",
+		customres := []Customer{
+			{ID: uuid.New(), Name: "My customer 01", Cnpj: "37.149.345/0001-23"},
+			{ID: uuid.New(), Name: "My customer 02", Cnpj: "37.149.345/0001-22"},
+			{ID: uuid.New(), Name: "My customer 03", Cnpj: "37.149.345/0001-21"},
 		}
 
 		return c.JSON(customres)
