@@ -66,6 +66,48 @@ func main() {
 
 	})
 
+	//test routes
+	test := app.Group("test", func(c *fiber.Ctx) error {
+
+		c.Set("Access-Control-Allow-Origin", "*")
+		c.Set("Cache-Control", "max-age='86400'")
+
+		return c.Next()
+	})
+
+	test.Get("/user", func(c *fiber.Ctx) error {
+		resp := User{
+			ID:    uuid.New(),
+			Name:  "Andersson",
+			Email: "test@gmail.com",
+			Type:  1,
+		}
+
+		return c.JSON(resp)
+	})
+
+	test.Get("/customers", func(c *fiber.Ctx) error {
+
+		var customres []Customer
+
+		one := Customer{
+			Name: "My Customer",
+			Cnpj: "37.149.345/0001-23",
+		}
+
+		two := Customer{
+			Name: "My Customer",
+			Cnpj: "37.149.345/0001-23",
+		}
+
+		tree := Customer{
+			Name: "My Customer",
+			Cnpj: "37.149.345/0001-23",
+		}
+
+		return c.JSON(customres)
+	})
+
 	//connect database
 	db, err := gorm.Open(postgres.Open(os.Getenv("PG_STRING")), &gorm.Config{})
 
