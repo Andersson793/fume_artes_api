@@ -172,9 +172,11 @@ func main() {
 
 	api.Get("historical_data", func(c *fiber.Ctx) error {
 
-		// fiber map
+		var resp []HistoricalData
 
-		return c.SendStatus(200)
+		db.Table("historical_data").Scan(&resp)
+
+		return c.JSON(resp)
 	})
 
 	//see Query params
