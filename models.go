@@ -27,6 +27,7 @@ type Order struct {
 	ID          uuid.UUID      `json:"id"`
 	Customer    string         `json:"customer"`
 	Description string         `json:"description"`
+	Payment     string         `json:"payment"`
 	UserID      uuid.UUID      `json:"user_id"` //foreign key
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`

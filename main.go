@@ -139,6 +139,7 @@ func main() {
 		type Result struct {
 			ID          uuid.UUID `json:"id"`
 			Description string    `json:"description"`
+			Payment     string    `json:"payment"`
 			Customer    string    `json:"customer"`
 			CreatedAt   time.Time `json:"created_at"`
 			Total       string    `json:"total_items"`
@@ -146,7 +147,7 @@ func main() {
 
 		var result []Result
 
-		db.Model(&orders).Select("orders.id, orders.description, orders.customer, orders.created_at, SUM(order_items.price) as total").Joins("inner join order_items on order_items.order_id = orders.id").Group("orders.id").Scan(&result)
+		db.Model(&orders).Select("orders.id, orders.description,orders.payment, orders.customer, orders.created_at, SUM(order_items.price) as total").Joins("inner join order_items on order_items.order_id = orders.id").Group("orders.id").Order("orders.created_at DESC").Scan(&result)
 
 		return c.JSON(result)
 	})
@@ -332,20 +333,20 @@ func main() {
 
 	api.Post("/orders", func(c *fiber.Ctx) error {
 
-		var orders Order
+		var order Order
 
 		//parse request body
-		err := c.BodyParser(&orders)
+		err := c.BodyParser(&order)
 
 		if err != nil {
 			log.Println(err)
 		}
 
-		orders.ID = uuid.New()
+		order.ID = uuid.New()
 
 		statusCode := 200
 
-		rp := db.Create(&orders)
+		rp := db.Create(&order)
 
 		if rp.Error != nil {
 			statusCode = 400
