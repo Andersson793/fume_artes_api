@@ -26,7 +26,7 @@ func main() {
 	app := fiber.New()
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "http://localhost,http://localhost:5173, http://127.0.0.2, http://127.0.0.2:5173",
+		AllowOrigins: "https://fume-artes-system.vercel.app, http://127.0.0.2:4173, http://localhost:5173, http://127.0.0.2, http://127.0.0.2:5173",
 	}))
 
 	api := app.Group("/api", func(c *fiber.Ctx) error {
