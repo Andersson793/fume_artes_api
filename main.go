@@ -15,6 +15,7 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/joho/godotenv"
 )
@@ -133,6 +134,16 @@ func main() {
 		return c.JSON(users)
 	})
 
+	api.Get("/orders_full/:id", func(c *fiber.Ctx) error {
+
+		//var orders []Order
+		var order Order
+
+		db.Preload("order_Items").Preload(clause.Associations).Where("id = ?", c.Params("id")).Find(&order).Scan(&order)
+
+		return c.JSON(order)
+	})
+
 	api.Get("/orders", func(c *fiber.Ctx) error {
 		var orders []Order
 
@@ -147,16 +158,16 @@ func main() {
 
 		var result []Result
 
-		db.Model(&orders).Select("orders.id, orders.description,orders.payment, orders.customer, orders.created_at, SUM(order_items.price) as total").Joins("inner join order_items on order_items.order_id = orders.id").Group("orders.id").Order("orders.created_at DESC").Scan(&result)
+		db.Model(&orders).Preload("OrderItems").Select("orders.id, orders.description,orders.payment, orders.customer, orders.created_at, SUM(order_items.price) as total").Joins("inner join order_items on order_items.order_id = orders.id").Group("orders.id").Order("orders.created_at DESC").Scan(&result)
 
-		return c.JSON(result)
+		return c.JSON(&result)
 	})
 
 	api.Get("/hgbrasil", func(c *fiber.Ctx) error {
 
+		//fiber cache (change !)
 		c.Response().Header.Add("Cache-Control", "max-age=3600, private")
 
-		//remove the key
 		agent := fiber.Get("https://api.hgbrasil.com/finance?key=" + os.Getenv("HG_KEY"))
 
 		statusCode, body, errs := agent.Bytes()
@@ -234,14 +245,11 @@ func main() {
 			log.Println(err)
 		}
 
-		if err != nil {
-			log.Println(err)
-		}
-
 		type Resp struct {
 			Token     string `json:"token"`
 			UserName  string `json:"user_name"`
 			UserEmail string `json:"user_email"`
+			UserID    string `json:"user_id"`
 		}
 
 		var resp Resp
@@ -249,6 +257,7 @@ func main() {
 		resp.Token = tokenString
 		resp.UserName = user.Name
 		resp.UserEmail = user.Email
+		resp.UserID = user.ID.String()
 
 		return c.JSON(resp)
 	})
@@ -349,6 +358,23 @@ func main() {
 		rp := db.Create(&order)
 
 		if rp.Error != nil {
+			statusCode = 400
+		}
+
+		return c.SendStatus(statusCode)
+	})
+
+	api.Put("/Orders", func(c *fiber.Ctx) error {
+		var order Order
+
+		statusCode := 200
+
+		c.BodyParser(&order)
+
+		//resp := db.Save(&order)
+		resp := db.Session(&gorm.Session{FullSaveAssociations: true}).Updates(&order)
+
+		if resp.Error != nil {
 			statusCode = 400
 		}
 

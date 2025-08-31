@@ -32,10 +32,10 @@ type Order struct {
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `json:"deleted_at"`
-	OrderItems  []OrderItems   `json:"order_items"` //has many
+	OrderItems  []OrderItem    `json:"order_items"` //has many
 }
 
-type OrderItems struct {
+type OrderItem struct {
 	ID        uuid.UUID      `json:"id" gorm:"default:gen_random_uuid()"` //gorm default
 	Name      string         `json:"name"`
 	Price     int            `json:"price"`
