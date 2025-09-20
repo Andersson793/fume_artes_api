@@ -186,7 +186,7 @@ func main() {
 
 		var resp []HistoricalData
 
-		db.Table("historical_data").Scan(&resp)
+		db.Table("historical_data").Limit(7).Scan(&resp)
 
 		return c.JSON(resp)
 	})
