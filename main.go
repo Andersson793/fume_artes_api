@@ -1,22 +1,10 @@
 package main
 
 import (
-	"encoding/base64"
-	"encoding/json"
-	"errors"
-	"log"
-	"os"
-	"time"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
-
+	"github.com/Andersson793/fume_artes_api/m/routes"
 	"github.com/joho/godotenv"
 )
 
@@ -42,377 +30,37 @@ func main() {
 			return fiber.NewError(404, "The Autorization header is missing")
 		}
 
-		key, err := base64.StdEncoding.DecodeString(os.Getenv("JWT_KEY"))
+		var _, err = routes.JwtValidator(tokenString)
 
-		//validate token
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
+		if err != nil {
 
-			return key, nil
-		}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+			c.SendStatus(404)
 
-		switch {
-		case token.Valid:
-			return c.Next()
-		case errors.Is(err, jwt.ErrTokenMalformed):
-			return c.SendString("That's not even a token")
-		case errors.Is(err, jwt.ErrTokenSignatureInvalid):
-			// Invalid signature
-			return c.SendString("Invalid signature")
-		case errors.Is(err, jwt.ErrTokenExpired) || errors.Is(err, jwt.ErrTokenNotValidYet):
-			// Token is either expired or not active yet
-			return c.SendString("Timing is everything")
-		default:
-			return c.SendString("Couldn't handle this token")
+			return c.SendString(err.Error())
 		}
-
-	})
-
-	//test routes
-	test := app.Group("/test", func(c *fiber.Ctx) error {
-
-		c.Set("Access-Control-Allow-Origin", "*")
-		c.Set("Cache-Control", "max-age=86400")
 
 		return c.Next()
+
 	})
 
-	test.Get("/user", func(c *fiber.Ctx) error {
-		resp := User{
-			ID:    uuid.New(),
-			Name:  "Andersson",
-			Email: "test@gmail.com",
-			Type:  1,
-		}
-
-		return c.JSON(resp)
-	})
-
-	test.Get("/customers", func(c *fiber.Ctx) error {
-
-		customres := []Customer{
-			{ID: uuid.New(), Name: "My customer 01", Cnpj: "37.149.345/0001-23"},
-			{ID: uuid.New(), Name: "My customer 02", Cnpj: "37.149.345/0001-22"},
-			{ID: uuid.New(), Name: "My customer 03", Cnpj: "37.149.345/0001-21"},
-		}
-
-		return c.JSON(customres)
-	})
-
-	//connect database
-	db, err := gorm.Open(postgres.Open(os.Getenv("PG_STRING")), &gorm.Config{})
-
-	if err != nil {
-		println("Can't connect database")
-	}
-
-	api.Get("/customers", func(c *fiber.Ctx) error {
-
-		var customers []Customer
-
-		db.Find(&customers)
-
-		return c.JSON(customers)
-	})
-
-	api.Get("/users/:id", func(c *fiber.Ctx) error {
-
-		var user User
-
-		//can use cookies
-
-		db.Find(&user, "id = ?", c.Params("id"))
-
-		return c.JSON(user)
-	})
-
-	api.Get("/users", func(c *fiber.Ctx) error {
-
-		var users []User
-
-		db.Find(&users)
-
-		return c.JSON(users)
-	})
-
-	api.Get("/orders_full/:id", func(c *fiber.Ctx) error {
-
-		//var orders []Order
-		var order Order
-
-		db.Preload("order_Items").Preload(clause.Associations).Where("id = ?", c.Params("id")).Find(&order).Scan(&order)
-
-		return c.JSON(order)
-	})
-
-	api.Get("/orders", func(c *fiber.Ctx) error {
-		var orders []Order
-
-		type Result struct {
-			ID          uuid.UUID `json:"id"`
-			Description string    `json:"description"`
-			Payment     string    `json:"payment"`
-			Customer    string    `json:"customer"`
-			CreatedAt   time.Time `json:"created_at"`
-			Total       string    `json:"total_items"`
-		}
-
-		var result []Result
-
-		db.Model(&orders).Preload("OrderItems").Select("orders.id, orders.description,orders.payment, orders.customer, orders.created_at, SUM(order_items.price) as total").Joins("inner join order_items on order_items.order_id = orders.id").Group("orders.id").Order("orders.created_at DESC").Scan(&result)
-
-		return c.JSON(&result)
-	})
-
-	api.Get("/hgbrasil", func(c *fiber.Ctx) error {
-
-		//fiber cache (change !)
-		c.Response().Header.Add("Cache-Control", "max-age=3600, private")
-
-		agent := fiber.Get("https://api.hgbrasil.com/finance?key=" + os.Getenv("HG_KEY"))
-
-		statusCode, body, errs := agent.Bytes()
-
-		if len(errs) > 0 {
-			log.Println(errs)
-		}
-
-		var something fiber.Map
-		json.Unmarshal(body, &something)
-
-		return c.Status(statusCode).JSON(something)
-	})
-
-	api.Get("historical_data", func(c *fiber.Ctx) error {
-
-		var resp []HistoricalData
-
-		db.Table("historical_data").Limit(7).Scan(&resp)
-
-		return c.JSON(resp)
-	})
-
-	//see Query params
-	api.Get("/pending_services", func(c *fiber.Ctx) error {
-		var pending_service []PendingService
-
-		type Result struct {
-			ID          uuid.UUID `json:"id"`
-			Name        string    `json:"user_name"`
-			Description string    `json:"description"`
-			CreatedAt   time.Time `json:"created_at"`
-		}
-
-		var result []Result
-
-		db.Model(&pending_service).Select("pending_services.id, users.name, pending_services.description, pending_services.created_at").Joins("inner join users on pending_services.user_id = users.id").Scan(&result)
-
-		return c.JSON(result)
-	})
+	api.Get("/customers", routes.Customers)
+	api.Get("/users/:id", routes.GetUser)
+	api.Get("/users", routes.Users)
+	api.Get("/orders_full/:id", routes.GetOrder)
+	api.Get("/orders", routes.Orders)
+	api.Get("/hgbrasil", routes.HgBrasil)
+	api.Get("historical_data", routes.Historical)
+	//app.Get("/jwt_validate", routes.JwtValidator)
 
 	//login
-	app.Post("/login", func(c *fiber.Ctx) error {
+	app.Post("/login", routes.Login)
+	api.Post("/users", routes.PostUser)
+	api.Post("/customers", routes.PostCustomers)
+	api.Post("/orders", routes.PostOrders)
 
-		var LoginForm struct {
-			Email    string `json:"email"`
-			Password string `json:"password"`
-		}
+	api.Put("/Orders", routes.PutOrders)
 
-		var user User
-
-		//get request body
-		c.BodyParser(&LoginForm)
-
-		query := db.Where("password = crypt($1, password) AND email = $2", LoginForm.Password, LoginForm.Email).First(&user).Scan(&user)
-
-		if query.RowsAffected < 1 {
-			return c.Status(403).SendString("login failed")
-		}
-
-		//generete JWT token
-		var tokenString string
-
-		key, err := base64.StdEncoding.DecodeString(os.Getenv("JWT_KEY"))
-
-		t := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"user_id": user.ID.String(),
-			"name":    user.Name,
-			"exp":     time.Now().Add(24 * time.Hour).Unix(),
-		})
-
-		tokenString, err = t.SignedString(key)
-
-		if err != nil {
-			log.Println(err)
-		}
-
-		type Resp struct {
-			Token     string `json:"token"`
-			UserName  string `json:"user_name"`
-			UserEmail string `json:"user_email"`
-			UserID    string `json:"user_id"`
-		}
-
-		var resp Resp
-
-		resp.Token = tokenString
-		resp.UserName = user.Name
-		resp.UserEmail = user.Email
-		resp.UserID = user.ID.String()
-
-		return c.JSON(resp)
-	})
-
-	//validate jwt token
-	app.Get("/jwt_validate", func(c *fiber.Ctx) error {
-
-		authorization := c.GetReqHeaders()
-
-		var tokenString string = authorization["Authorization"][0]
-
-		key, err := base64.StdEncoding.DecodeString(os.Getenv("JWT_KEY"))
-
-		//validate token
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-
-			return key, nil
-		}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
-
-		switch {
-		case token.Valid:
-			return c.SendString("You look nice today")
-		case errors.Is(err, jwt.ErrTokenMalformed):
-			return c.SendString("That's not even a token")
-		case errors.Is(err, jwt.ErrTokenSignatureInvalid):
-			// Invalid signature
-			return c.SendString("Invalid signature")
-		case errors.Is(err, jwt.ErrTokenExpired) || errors.Is(err, jwt.ErrTokenNotValidYet):
-			// Token is either expired or not active yet
-			return c.SendString("Timing is everything")
-		default:
-			return c.SendString("Couldn't handle this token")
-		}
-
-	})
-
-	api.Post("/users", func(c *fiber.Ctx) error {
-
-		var user User
-
-		err := c.BodyParser(&user)
-
-		if err != nil {
-			log.Println(err)
-		}
-
-		user.ID = uuid.New()
-
-		statusCode := 200
-
-		rp := db.Create(&user)
-
-		if rp.Error != nil {
-			statusCode = 400
-		}
-
-		return c.SendStatus(statusCode)
-	})
-
-	api.Post("/customers", func(c *fiber.Ctx) error {
-
-		var customer Customer
-
-		err := c.BodyParser(&customer)
-
-		if err != nil {
-			log.Println(err)
-		}
-
-		customer.ID = uuid.New()
-
-		statusCode := 200
-
-		rp := db.Create(&customer)
-
-		if rp.Error != nil {
-			statusCode = 400
-		}
-
-		return c.SendStatus(statusCode)
-	})
-
-	api.Post("/orders", func(c *fiber.Ctx) error {
-
-		var order Order
-
-		//parse request body
-		err := c.BodyParser(&order)
-
-		if err != nil {
-			log.Println(err)
-		}
-
-		order.ID = uuid.New()
-
-		statusCode := 200
-
-		rp := db.Create(&order)
-
-		if rp.Error != nil {
-			statusCode = 400
-		}
-
-		return c.SendStatus(statusCode)
-	})
-
-	api.Put("/Orders", func(c *fiber.Ctx) error {
-		var order Order
-
-		statusCode := 200
-
-		c.BodyParser(&order)
-
-		//resp := db.Save(&order)
-		resp := db.Session(&gorm.Session{FullSaveAssociations: true}).Updates(&order)
-
-		if resp.Error != nil {
-			statusCode = 400
-		}
-
-		return c.SendStatus(statusCode)
-	})
-
-	api.Post("/pending_services", func(c *fiber.Ctx) error {
-
-		var pendingServices PendingService
-
-		err := c.BodyParser(&pendingServices)
-
-		if err != nil {
-			log.Println(err)
-		}
-
-		pendingServices.ID = uuid.New()
-
-		statusCode := 200
-
-		rp := db.Create(&pendingServices)
-
-		if rp.Error != nil {
-			statusCode = 400
-		}
-
-		return c.SendStatus(statusCode)
-	})
-
-	// Delete
-	api.Delete("/orders/:id", func(c *fiber.Ctx) error {
-
-		var order Order
-
-		db.Where("id = ?", c.Params("id")).Delete(&order)
-
-		return c.SendString("deleded")
-	})
+	api.Delete("/orders/:id", routes.DelOrder)
 
 	app.Listen(":3000")
 }
