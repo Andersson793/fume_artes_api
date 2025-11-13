@@ -50,9 +50,7 @@ func main() {
 	api.Get("/orders", routes.Orders)
 	api.Get("/hgbrasil", routes.HgBrasil)
 	api.Get("historical_data", routes.Historical)
-	//app.Get("/jwt_validate", routes.JwtValidator)
 
-	//login
 	app.Post("/login", routes.Login)
 	api.Post("/users", routes.PostUser)
 	api.Post("/customers", routes.PostCustomers)

@@ -8,5 +8,5 @@ func DelOrder(c *fiber.Ctx) error {
 
 	db.Where("id = ?", c.Params("id")).Delete(&order)
 
-	return c.SendString("deleded")
+	return c.SendString("item ? deleted", c.Params("id"))
 }
