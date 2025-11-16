@@ -7,6 +7,8 @@ import (
 
 func GetOrder(c *fiber.Ctx) error {
 
+	var db = DbConnect()
+
 	//var orders []Order
 	var order Order
 

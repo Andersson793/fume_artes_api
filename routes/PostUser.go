@@ -8,6 +8,7 @@ import (
 )
 
 func PostUser(c *fiber.Ctx) error {
+	var db = DbConnect()
 
 	var user User
 

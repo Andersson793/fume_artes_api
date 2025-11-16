@@ -12,6 +12,8 @@ import (
 
 func Login(c *fiber.Ctx) error {
 
+	var db = DbConnect()
+
 	var LoginForm struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`

@@ -5,6 +5,7 @@ import (
 )
 
 func GetUser(c *fiber.Ctx) error {
+	var db = DbConnect()
 
 	var user User
 

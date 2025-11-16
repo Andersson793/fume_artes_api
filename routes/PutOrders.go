@@ -6,6 +6,7 @@ import (
 )
 
 func PutOrders(c *fiber.Ctx) error {
+	var db = DbConnect()
 	var order Order
 
 	statusCode := 200

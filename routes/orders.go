@@ -8,6 +8,7 @@ import (
 )
 
 func Orders(c *fiber.Ctx) error {
+	var db = DbConnect()
 	var orders []Order
 
 	type Result struct {

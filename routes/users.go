@@ -3,6 +3,7 @@ package routes
 import "github.com/gofiber/fiber/v2"
 
 func Users(c *fiber.Ctx) error {
+	var db = DbConnect()
 
 	var users []User
 

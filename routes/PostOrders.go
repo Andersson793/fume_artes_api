@@ -8,6 +8,7 @@ import (
 )
 
 func PostOrders(c *fiber.Ctx) error {
+	var db = DbConnect()
 
 	var order Order
 
