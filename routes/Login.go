@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"encoding/base64"
 	"log"
 	"os"
 	"time"
@@ -33,7 +32,7 @@ func Login(c *fiber.Ctx) error {
 	//generete JWT token
 	var tokenString string
 
-	key, err := base64.StdEncoding.DecodeString(os.Getenv("JWT_KEY"))
+	key := os.Getenv("JWT_KEY")
 
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID.String(),
@@ -41,7 +40,7 @@ func Login(c *fiber.Ctx) error {
 		"exp":     time.Now().Add(24 * time.Hour).Unix(),
 	})
 
-	tokenString, err = t.SignedString(key)
+	tokenString, err := t.SignedString([]byte(key))
 
 	if err != nil {
 		log.Println(err)
