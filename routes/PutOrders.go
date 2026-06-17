@@ -1,17 +1,17 @@
 package routes
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
 )
 
-func PutOrders(c *fiber.Ctx) error {
+func PutOrders(c fiber.Ctx) error {
 	var db = DbConnect()
 	var order Order
 
 	statusCode := 200
 
-	c.BodyParser(&order)
+	c.Bind().Body(&order)
 
 	//resp := db.Save(&order)
 	resp := db.Session(&gorm.Session{FullSaveAssociations: true}).Updates(&order)

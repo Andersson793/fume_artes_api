@@ -7,22 +7,22 @@ import (
 	"github.com/google/uuid"
 )
 
-func PostCustomers(c fiber.Ctx) error {
+func PostProducts(c fiber.Ctx) error {
 	var db = DbConnect()
 
-	var customer Customer
+	var product Products
 
-	err := c.Bind().Body(&customer)
+	err := c.Bind().Body(&product)
 
 	if err != nil {
 		log.Println(err)
 	}
 
-	customer.ID = uuid.New()
+	product.ID = uuid.New()
 
 	statusCode := 200
 
-	rp := db.Create(&customer)
+	rp := db.Create(&product)
 
 	if rp.Error != nil {
 		statusCode = 400

@@ -1,8 +1,8 @@
 package routes
 
-import "github.com/gofiber/fiber/v2"
+import "github.com/gofiber/fiber/v3"
 
-func Historical(c *fiber.Ctx) error {
+func Historical(c fiber.Ctx) error {
 
 	var db = DbConnect()
 

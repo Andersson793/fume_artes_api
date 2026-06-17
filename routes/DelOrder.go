@@ -1,8 +1,8 @@
 package routes
 
-import "github.com/gofiber/fiber/v2"
+import "github.com/gofiber/fiber/v3"
 
-func DelOrder(c *fiber.Ctx) error {
+func DelOrder(c fiber.Ctx) error {
 
 	var db = DbConnect()
 

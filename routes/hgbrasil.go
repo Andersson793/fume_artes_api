@@ -1,28 +1,25 @@
 package routes
 
 import (
-	"encoding/json"
-	"log"
+	"net/http"
 	"os"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
-func HgBrasil(c *fiber.Ctx) error {
+func HgBrasil(c fiber.Ctx) error {
 
 	//fiber cache (change !)
 	c.Response().Header.Add("Cache-Control", "max-age=3600, private")
 
-	agent := fiber.Get("https://api.hgbrasil.com/finance?key=" + os.Getenv("HG_KEY"))
+	//agent := fiber.Get("https://api.hgbrasil.com/finance?key=" + os.Getenv("HG_KEY"))
+	agent, err := http.Get("https://api.hgbrasil.com/finance?key=" + os.Getenv("HG_KEY"))
 
-	statusCode, body, errs := agent.Bytes()
-
-	if len(errs) > 0 {
-		log.Println(errs)
+	if err != nil {
+		c.SendString("fail to fetch hgbrasil api")
 	}
 
-	var something fiber.Map
-	json.Unmarshal(body, &something)
+	body := agent.Body
 
-	return c.Status(statusCode).JSON(something)
+	return c.JSON(body)
 }

@@ -11,7 +11,7 @@ import (
 
 func DbConnect() *gorm.DB {
 
-	godotenv.Load(".env.local")
+	godotenv.Load(".env")
 
 	var db, err = gorm.Open(postgres.Open(os.Getenv("PG_STRING")), &gorm.Config{})
 

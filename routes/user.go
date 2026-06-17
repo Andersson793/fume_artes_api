@@ -1,10 +1,10 @@
 package routes
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
-func GetUser(c *fiber.Ctx) error {
+func GetUser(c fiber.Ctx) error {
 	var db = DbConnect()
 
 	var user User

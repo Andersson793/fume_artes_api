@@ -5,11 +5,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
-func Login(c *fiber.Ctx) error {
+func Login(c fiber.Ctx) error {
 
 	var db = DbConnect()
 
@@ -20,13 +21,19 @@ func Login(c *fiber.Ctx) error {
 
 	var user User
 
-	//get request body
-	c.BodyParser(&LoginForm)
+	c.Bind().Body(&LoginForm)
 
-	query := db.Where("password = crypt($1, password) AND email = $2", LoginForm.Password, LoginForm.Email).First(&user).Scan(&user)
+	//query := db.Where("password = crypt($1, password) AND email = $2", LoginForm.Password, LoginForm.Email).First(&user).Scan(&user)
+	query := db.Where("email = ?", LoginForm.Email).First(&user).Scan(&user)
+
+	pwCheck := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(LoginForm.Password))
 
 	if query.RowsAffected < 1 {
-		return c.Status(403).SendString("login failed")
+		return c.Status(403).SendString(query.Error.Error())
+	}
+
+	if pwCheck == bcrypt.ErrMismatchedHashAndPassword {
+		return c.Status(403).SendString(pwCheck.Error())
 	}
 
 	//generete JWT token

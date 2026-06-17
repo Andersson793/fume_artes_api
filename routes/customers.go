@@ -1,10 +1,10 @@
 package routes
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
-func Customers(c *fiber.Ctx) error {
+func Customers(c fiber.Ctx) error {
 
 	var customers []Customer
 

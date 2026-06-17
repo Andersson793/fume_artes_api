@@ -3,17 +3,17 @@ package routes
 import (
 	"log"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 )
 
-func PostOrders(c *fiber.Ctx) error {
+func PostOrders(c fiber.Ctx) error {
 	var db = DbConnect()
 
 	var order Order
 
 	//parse request body
-	err := c.BodyParser(&order)
+	err := c.Bind().Body(&order)
 
 	if err != nil {
 		log.Println(err)

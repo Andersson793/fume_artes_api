@@ -3,11 +3,11 @@ package routes
 import (
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 )
 
-func Orders(c *fiber.Ctx) error {
+func Orders(c fiber.Ctx) error {
 	var db = DbConnect()
 	var orders []Order
 

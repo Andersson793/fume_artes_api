@@ -1,11 +1,11 @@
 package routes
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm/clause"
 )
 
-func GetOrder(c *fiber.Ctx) error {
+func GetOrder(c fiber.Ctx) error {
 
 	var db = DbConnect()
 
